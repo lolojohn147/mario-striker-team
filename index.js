@@ -83,11 +83,15 @@ async function DivideTeamBasedOnWinPercentage() {
     rightTeam.map((t, i) => `${i + 5}. ${t}`).join(', '),
   )
   console.log('\n')
-  const winTeam = prompt()('WHO WIN? L for Left Team, R for Right Team\n\n')
-  if (winTeam.toLowerCase() === 'l') {
-    await UpdateRankingsCSV(leftTeam, rightTeam)
-  } else {
-    await UpdateRankingsCSV(rightTeam, leftTeam)
+  while (true) {
+    const winTeam = prompt()('WHO WIN? L for Left Team, R for Right Team\n\n')
+    if (winTeam.toLowerCase() === 'l') {
+      await UpdateRankingsCSV(leftTeam, rightTeam)
+    } else if (winTeam.toLowerCase() === 'r') {
+      await UpdateRankingsCSV(rightTeam, leftTeam)
+    } else {
+      console.log('Please Type l or r ONLY')
+    }
   }
 }
 
