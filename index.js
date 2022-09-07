@@ -57,8 +57,10 @@ async function DivideTeamBasedOnWinPercentage() {
     return {
       Name: t.Name,
       RelativePercentage:
-        (t.Percentage - lowestPercentage) /
-        (highestPercentage - lowestPercentage),
+        ((t.Percentage - lowestPercentage) /
+          (highestPercentage - lowestPercentage)) *
+          0.75 +
+        0.25,
     }
   })
   let leftTeam = []
