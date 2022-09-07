@@ -1,6 +1,7 @@
 const fs = require('fs')
 const csv = require('csvtojson')
 const prompt = require('prompt-sync')
+const axios = require('axios')
 const nameList = [
   'Laub',
   'Lily',
@@ -44,23 +45,6 @@ for (let player of players) {
     throw new Error('Player not found, ', player)
   }
 }
-function RandomTeam() {
-  const playerCount = players.length
-  const leftTeam = []
-  const rightTeam = []
-  for (let i = 0; i < playerCount; i++) {
-    const randomIndex = Math.floor(Math.random() * players.length)
-    if (i % 2 === 0) {
-      leftTeam.push(players[randomIndex])
-    } else {
-      rightTeam.push(players[randomIndex])
-    }
-    players.splice(randomIndex, 1)
-  }
-  console.log('Left Team : ' + leftTeam)
-  console.log('Right Team : ' + rightTeam)
-}
-
 async function DivideTeamBasedOnWinPercentage() {
   const rankings = await GetRankingsFromCSV()
   const relevantRankings = rankings.filter(t => players.includes(t.Name))
@@ -133,12 +117,18 @@ function GetRandomPlayerFromRelativeRankings(relativeRankings) {
 }
 
 async function GetRankingsFromCSV() {
-  const files = fs.readdirSync('.')
-  const csvFile = files.find(file => file.includes('.csv'))
-  const jsonArr = await csv().fromFile(csvFile)
-  return jsonArr.map(t => {
-    let win = parseInt(t.Win)
-    let lose = parseInt(t.Lose)
+  const result = (
+    await axios.get(
+      'https://timothylam.api.stdlib.com/mario-striker-ranking@dev/table/',
+    )
+  ).data
+  if (result.statusCode !== 200) {
+    throw new Error('Error getting rankings')
+  }
+  const table = JSON.parse(result.body)
+  return table.map(t => {
+    let win = t.Win
+    let lose = t.Lose
     if (win + lose < 10) {
       win += 5
       lose += 5
@@ -153,27 +143,45 @@ async function GetRankingsFromCSV() {
 }
 
 async function UpdateRankingsCSV(winTeam, loseTeam) {
-  const files = fs.readdirSync('.')
-  const csvFile = files.find(file => file.includes('.csv'))
-  const jsonArr = await csv().fromFile(csvFile)
-  const updatedJsonArr = jsonArr.map(t => {
-    if (winTeam.includes(t.Name)) {
-      t.Win = parseInt(t.Win) + 1
-    } else if (loseTeam.includes(t.Name)) {
-      t.Lose = parseInt(t.Lose) + 1
+  try {
+    const result = (
+      await axios.post(
+        'https://timothylam.api.stdlib.com/mario-striker-ranking@dev/updateRanking/',
+        {
+          winTeam,
+          loseTeam,
+        },
+      )
+    ).data
+    console.log(result)
+    if (result.statusCode !== 200) {
+      throw new Error('Error updating rankings')
     }
-    return t
-  })
-  const csvData = [
-    'Name,Win,Lose,Percentage',
-    ...updatedJsonArr.map((t, i) => {
-      return `${t.Name},${t.Win},${t.Lose},${(
-        ((parseInt(t.Win) + 1) / (parseInt(t.Win) + parseInt(t.Lose) + 2)) *
-        100
-      ).toFixed(4)}%`
-    }),
-  ].join('\n')
+  } catch (e) {
+    console.log(e)
+  }
+  // const files = fs.readdirSync('.')
+  // const csvFile = files.find(file => file.includes('.csv'))
+  // const jsonArr = await csv().fromFile(csvFile)
+  // const updatedJsonArr = jsonArr.map(t => {
+  //   if (winTeam.includes(t.Name)) {
+  //     t.Win = parseInt(t.Win) + 1
+  //   } else if (loseTeam.includes(t.Name)) {
+  //     t.Lose = parseInt(t.Lose) + 1
+  //   }
+  //   return t
+  // })
+  // const csvData = [
+  //   'Name,Win,Lose,Percentage',
+  //   ...updatedJsonArr.map((t, i) => {
+  //     return `${t.Name},${t.Win},${t.Lose},${(
+  //       ((parseInt(t.Win) + 1) / (parseInt(t.Win) + parseInt(t.Lose) + 2)) *
+  //       100
+  //     ).toFixed(4)}%`
+  //   }),
+  // ].join('\n')
 
-  fs.writeFileSync(csvFile, csvData)
+  // fs.writeFileSync(csvFile, csvData)
+  // console.log(updatedJsonArr)
 }
 DivideTeamBasedOnWinPercentage()
